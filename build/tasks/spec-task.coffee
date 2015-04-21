@@ -4,7 +4,7 @@ path = require 'path'
 _ = require 'underscore-plus'
 async = require 'async'
 
-concurrency = 2
+concurrency = 1
 
 module.exports = (grunt) ->
   {isAtomPackage, spawn} = require('./task-helpers')(grunt)
@@ -78,7 +78,7 @@ module.exports = (grunt) ->
       continue unless isAtomPackage(packagePath)
       packageSpecQueue.push(packagePath)
 
-    packageSpecQueue.concurrency = concurrency - 1
+    packageSpecQueue.concurrency = concurrency
     packageSpecQueue.drain = -> callback(null, failedPackages)
 
   runCoreSpecs = (callback) ->
@@ -110,8 +110,6 @@ module.exports = (grunt) ->
         process.stderr.write(fs.readFileSync('ci.log')) if error
         fs.unlinkSync('ci.log')
       else
-        # TODO: Restore concurrency on Windows
-        packageSpecQueue?.concurrency = concurrency
         logDeprecations('Core Specs', results)
 
       callback(null, error)
@@ -123,7 +121,7 @@ module.exports = (grunt) ->
     # TODO: This should really be parallel on both platforms, however our
     # fixtures step on each others toes currently.
     if process.platform in ['darwin', 'linux']
-      method = async.parallel
+      method = async.series
     else if process.platform is 'win32'
       method = async.series
 
